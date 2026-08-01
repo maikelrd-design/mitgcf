@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Mi TGCF</string>
+
+    <color name="navy">#FF0E1738</color>
+    <color name="navy_oscuro">#FF0E1A45</color>
+
+    <style name="Tema.MiTGCF" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/navy</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
