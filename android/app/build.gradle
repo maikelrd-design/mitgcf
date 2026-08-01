@@ -50,6 +50,10 @@ android {
 }
 
 dependencies {
+    // La facturación arrastra una versión antigua de la librería de Kotlin y AndroidX otra más nueva.
+    // El BOM las alinea y evita que aparezcan clases duplicadas al empaquetar.
+    implementation platform('org.jetbrains.kotlin:kotlin-bom:1.9.24')
+
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'androidx.webkit:webkit:1.12.1'
     implementation 'com.android.billingclient:billing:7.1.1'
