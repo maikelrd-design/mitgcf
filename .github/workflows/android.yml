@@ -1,0 +1,94 @@
+name: Compilar Mi TGCF
+
+# Se compila al tocar el proyecto Android, y también a mano desde la pestaña Actions.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+jobs:
+  compilar:
+    name: Generar el paquete para Google Play
+    runs-on: ubuntu-latest
+
+    env:
+      CLAVE_B64: ${{ secrets.KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Preparar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Preparar el SDK de Android
+        uses: android-actions/setup-android@v3
+
+      - name: Preparar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Recuperar la clave de firma
+        id: clave
+        run: |
+          if [ -n "$CLAVE_B64" ]; then
+            echo "$CLAVE_B64" | base64 -d > "$RUNNER_TEMP/subida.jks"
+            echo "KEYSTORE_FILE=$RUNNER_TEMP/subida.jks" >> "$GITHUB_ENV"
+            echo "firmado=si" >> "$GITHUB_OUTPUT"
+            echo "Clave de firma cargada: el paquete saldrá firmado."
+          else
+            echo "firmado=no" >> "$GITHUB_OUTPUT"
+            echo "No hay clave configurada: el paquete saldrá SIN FIRMAR (sirve para comprobar que compila)."
+          fi
+
+      - name: Compilar el paquete y el APK
+        working-directory: android
+        run: gradle --no-daemon bundleRelease assembleRelease
+
+      - name: Renombrar la salida
+        run: |
+          mkdir -p salida
+          find android/app/build/outputs -name '*.aab' -exec cp {} salida/ \;
+          find android/app/build/outputs -name '*.apk' -exec cp {} salida/ \;
+          ls -la salida
+
+      - name: Guardar el paquete para Google Play
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mi-TGCF-para-Play-Store
+          path: salida/*.aab
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Guardar el APK de prueba
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mi-TGCF-APK-de-prueba
+          path: salida/*.apk
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Resumen
+        run: |
+          {
+            echo "### Compilación terminada"
+            echo ""
+            if [ "${{ steps.clave.outputs.firmado }}" = "si" ]; then
+              echo "El paquete está **firmado** y se puede subir a Google Play."
+            else
+              echo "El paquete está **sin firmar**: compila bien, pero antes de subirlo a Google Play"
+              echo "hay que configurar los cuatro secretos de firma en Settings → Secrets and variables → Actions."
+            fi
+            echo ""
+            echo "Descarga los archivos en la sección **Artifacts** de esta misma página."
+          } >> "$GITHUB_STEP_SUMMARY"
