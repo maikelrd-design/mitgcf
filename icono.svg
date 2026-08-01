@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2b4590"/>
+      <stop offset="0.45" stop-color="#1d2f6d"/>
+      <stop offset="1" stop-color="#0e1a45"/>
+    </linearGradient>
+    <linearGradient id="sh" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#000" stop-opacity=".20"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    </linearGradient>
+    <g id="plancha" style="color:#fff">
+      <g fill="none" stroke="currentColor" stroke-width="3.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15.5 20 L34 24 L42 30"/><path d="M15 22 L13 29 H23"/><path d="M6 35 H43"/>
+      </g><circle cx="11" cy="17.5" r="4.7" fill="currentColor"/>
+    </g>
+    <g id="cav" style="color:#fff">
+      <g fill="none" stroke="currentColor" stroke-width="3.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M28 14 L24.5 22 L30 27"/><path d="M28 16 L36 14"/><path d="M27 18 L20 21"/>
+        <path d="M24.5 22 L18 27"/><path d="M7 40 L15 32 L23 40 L31 32 L40 38"/>
+      </g><circle cx="30" cy="9.5" r="4.5" fill="currentColor"/>
+    </g>
+    <g id="flexiones" style="color:#fff">
+      <g fill="none" stroke="currentColor" stroke-width="3.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15 18.5 L31 24 L41 27"/><path d="M17.5 20 L17.5 31"/><path d="M31 24 L31 31"/><path d="M6 35 H43"/>
+      </g><circle cx="10.5" cy="15" r="4.7" fill="currentColor"/>
+    </g>
+    <g id="carrera" style="color:#fff">
+      <g fill="none" stroke="currentColor" stroke-width="3.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M27 15 L23 25 L29 33"/><path d="M23 25 L15 31"/><path d="M27 17.5 L36 16 L39 21"/>
+        <path d="M25.5 20 L17 22"/><path d="M6 14 H14 M4 21 H11 M6 28 H12"/>
+      </g><circle cx="29" cy="10" r="4.7" fill="currentColor"/>
+    </g>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#bg)"/>
+
+  <!-- sombra larga hacia la esquina inferior derecha -->
+  <path d="M232 60 h48 l232 232 v220 H452 L232 292 Z" fill="url(#sh)"/>
+  <path d="M256 130 L512 386 v126 H386 Z" fill="url(#sh)"/>
+
+  <!-- botones del cronómetro -->
+  <rect x="222" y="52" width="68" height="46" rx="13" fill="#fff"/>
+  <rect x="207" y="88" width="98" height="30" rx="12" fill="#fff"/>
+  <rect x="126" y="86" width="58" height="46" rx="13" fill="#fff" transform="rotate(-33 155 109)"/>
+  <rect x="328" y="86" width="58" height="46" rx="13" fill="#fff" transform="rotate(33 357 109)"/>
+
+  <!-- esfera -->
+  <circle cx="256" cy="298" r="158" fill="none" stroke="#fff" stroke-width="26"/>
+  <!-- cruz en X que divide los cuatro cuadrantes -->
+  <path d="M154 196 L358 400 M358 196 L154 400" stroke="#fff" stroke-width="22" stroke-linecap="round"/>
+
+  <!-- pictogramas de las cuatro pruebas -->
+  <use href="#plancha"   transform="translate(214,163) scale(1.72)"/>
+  <use href="#cav"       transform="translate(128,252) scale(1.70)"/>
+  <use href="#flexiones" transform="translate(297,260) scale(1.70)"/>
+  <use href="#carrera"   transform="translate(215,352) scale(1.72)"/>
+</svg>

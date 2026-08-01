@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mi TGCF</title>
+<meta name="description" content="Calculadora, cronómetro y planes de entrenamiento para el test general de la condición física. Marca tus tiempos, calcula tus puntos y entrena con criterio.">
+<meta name="theme-color" content="#0e1a45">
+<link rel="icon" href="icono.svg">
+<link rel="apple-touch-icon" href="icono.png">
+<meta property="og:title" content="Mi TGCF">
+<meta property="og:description" content="Calcula tus puntos, cronometra tus pruebas y entrena con un plan hecho a la medida de tus marcas.">
+<meta property="og:image" content="icono.png">
+<meta property="og:type" content="website">
+<style>
+:root{
+  --navy:#16255c; --navy2:#22357a; --navy3:#0f1a42;
+  --bg:#0e1738; --card:#1b2a60; --card2:#24356f; --line:#324681;
+  --txt:#eef2fb; --dim:#a4b3dc; --acc:#f0c04a; --acc2:#ffd873;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:920px;margin:0 auto;padding:0 20px}
+a{color:var(--acc2)}
+
+/* ---------- portada ---------- */
+.hero{background:linear-gradient(140deg,var(--navy3),var(--navy2) 55%,var(--navy));
+  padding:56px 0 64px;position:relative;overflow:hidden}
+.hero:after{content:"";position:absolute;right:-120px;top:-120px;width:420px;height:420px;
+  border-radius:50%;background:rgba(240,192,74,.07)}
+.hero .wrap{position:relative;z-index:2;display:flex;gap:32px;align-items:center;flex-wrap:wrap}
+.hero img{width:132px;height:132px;border-radius:30px;box-shadow:0 18px 44px rgba(0,0,0,.45);flex:0 0 auto}
+.hero h1{margin:0;font-size:44px;letter-spacing:-.5px;line-height:1.1;font-weight:800}
+.hero p.sub{margin:12px 0 0;font-size:18px;color:#c9d4f2;max-width:460px}
+.cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
+.btn{display:inline-block;padding:13px 24px;border-radius:12px;font-weight:800;font-size:15px;
+  text-decoration:none;border:1.5px solid var(--line);color:var(--txt);background:rgba(255,255,255,.05)}
+.btn.p{background:var(--acc);border-color:var(--acc);color:var(--navy3)}
+.btn:hover{filter:brightness(1.08)}
+
+/* ---------- secciones ---------- */
+section{padding:52px 0}
+h2{font-size:27px;margin:0 0 8px;letter-spacing:-.3px}
+.lead{color:var(--dim);margin:0 0 28px;font-size:16px;max-width:640px}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(246px,1fr))}
+.card{background:linear-gradient(150deg,var(--card2),var(--card));border:1px solid var(--line);
+  border-radius:16px;padding:20px 20px 22px}
+.card h3{margin:0 0 7px;font-size:16.5px;display:flex;align-items:center;gap:9px}
+.card h3 .n{width:24px;height:24px;flex:0 0 24px;border-radius:8px;background:var(--acc);color:var(--navy3);
+  display:grid;place-items:center;font-size:13px;font-weight:800}
+.card p{margin:0;font-size:14px;color:#cbd6f2}
+
+.band{background:var(--navy3);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.pruebas{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-top:22px}
+.pr{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:16px}
+.pr b{display:block;font-size:15px;margin-bottom:3px}
+.pr span{font-size:13px;color:var(--dim)}
+
+.autor{display:flex;gap:20px;align-items:flex-start;background:linear-gradient(150deg,var(--card2),var(--card));
+  border:1px solid var(--acc);border-radius:16px;padding:24px}
+.autor .ini{width:56px;height:56px;flex:0 0 56px;border-radius:16px;background:var(--acc);color:var(--navy3);
+  display:grid;place-items:center;font-weight:800;font-size:20px}
+.autor b{font-size:16px}
+.autor p{margin:6px 0 0;font-size:14px;color:#cbd6f2}
+
+footer{padding:32px 0 46px;color:var(--dim);font-size:13px;border-top:1px solid var(--line)}
+footer a{color:var(--dim)}
+@media(max-width:640px){
+  .hero{padding:38px 0 44px}
+  .hero h1{font-size:33px}
+  .hero img{width:96px;height:96px;border-radius:23px}
+  section{padding:40px 0}
+}
+</style></head><body>
+
+<div class="hero"><div class="wrap">
+  <img src="icono.svg" alt="Mi TGCF">
+  <div>
+    <h1>Mi TGCF</h1>
+    <p class="sub">Calcula tus puntos, cronometra tus pruebas y entrena con un plan hecho a la medida de tus marcas.</p>
+    <div class="cta">
+      <a class="btn p" href="app.html">Abrir la calculadora</a>
+      <a class="btn" href="#planes">Ver los planes</a>
+    </div>
+  </div>
+</div></div>
+
+<section><div class="wrap">
+  <h2>Qué hace</h2>
+  <p class="lead">Metes tus marcas y te dice exactamente dónde estás: puntos por prueba, perfil, nota final
+    y qué te falta para el siguiente escalón. Funciona sin conexión.</p>
+  <div class="grid">
+    <div class="card"><h3><span class="n">1</span>Puntuación al instante</h3>
+      <p>Cada marca se convierte en puntos según tu edad y tu sexo. Ves el perfil y la nota media sin hacer cuentas.</p></div>
+    <div class="card"><h3><span class="n">2</span>Cronómetro por prueba</h3>
+      <p>Con contador de repeticiones y tiempos de paso. Paras y la marca entra sola en el cálculo.</p></div>
+    <div class="card"><h3><span class="n">3</span>Simulador</h3>
+      <p>Mueve una marca y mira cómo cambia la nota. Sirve para saber en qué prueba te conviene apretar.</p></div>
+    <div class="card"><h3><span class="n">4</span>Objetivo</h3>
+      <p>Pon la nota que quieres sacar y te dice qué marca necesitas en cada prueba para llegar.</p></div>
+    <div class="card"><h3><span class="n">5</span>Progreso</h3>
+      <p>Guarda cada intento y compara. Ves la evolución de cada prueba a lo largo del tiempo.</p></div>
+    <div class="card"><h3><span class="n">6</span>Fichas de técnica</h3>
+      <p>Cómo se ejecuta cada prueba, qué se mide y qué fallos la invalidan, con ilustraciones.</p></div>
+  </div>
+</div></section>
+
+<div class="band"><section><div class="wrap">
+  <h2>Las cuatro pruebas</h2>
+  <p class="lead">Fuerza de tren superior, resistencia del core, agilidad y resistencia aeróbica.</p>
+  <div class="pruebas">
+    <div class="pr"><b>Flexo-extensiones</b><span>Repeticiones sin límite de tiempo</span></div>
+    <div class="pr"><b>Plancha isométrica</b><span>Tiempo de sostén</span></div>
+    <div class="pr"><b>Agilidad-velocidad</b><span>Circuito de 16 m cronometrado</span></div>
+    <div class="pr"><b>2.000 metros</b><span>Carrera contra reloj</span></div>
+  </div>
+</div></section></div>
+
+<section id="planes"><div class="wrap">
+  <h2>Planes de entrenamiento</h2>
+  <p class="lead">Doce semanas construidas sobre tus propias marcas. Seis planes según tu nivel y tu objetivo,
+    con ritmos personales calculados a partir de tu velocidad aeróbica máxima, cargas de fuerza sin llegar al fallo
+    y vídeos de ejecución de cada ejercicio. Están en la aplicación de Android.</p>
+  <div class="grid">
+    <div class="card"><h3>Base general</h3><p>Para quien parte de cero o vuelve después de un parón largo.</p></div>
+    <div class="card"><h3>Aprobar</h3><p>Objetivo: pasar el listón en las cuatro pruebas sin agujeros.</p></div>
+    <div class="card"><h3>Subir nota</h3><p>Ya apruebas con holgura y quieres puntuar alto.</p></div>
+    <div class="card"><h3>Carrera</h3><p>Cuando los 2.000 m son lo que te hunde la media.</p></div>
+    <div class="card"><h3>Fuerza</h3><p>Cuando lo que falla son las flexiones y la plancha.</p></div>
+    <div class="card"><h3>Mantenimiento</h3><p>Conservar el nivel sin quemarte entre convocatorias.</p></div>
+  </div>
+</div></section>
+
+<div class="band"><section><div class="wrap">
+  <h2>Quién está detrás</h2>
+  <div class="autor">
+    <div class="ini">MR</div>
+    <div>
+      <b>Maikel Rodríguez Domínguez</b>
+      <p>Graduado en Ciencias de la Actividad Física y del Deporte por la Universidad Autónoma de Madrid.
+        Máster de Formación Permanente en Alto Rendimiento Deportivo por el Comité Olímpico Español.</p>
+    </div>
+  </div>
+</div></section></div>
+
+<footer><div class="wrap">
+  © <span id="y">2026</span> Maikel Rodríguez Domínguez ·
+  <a href="privacidad.html">Política de privacidad</a> ·
+  <a href="mailto:maikelrd@hotmail.es">maikelrd@hotmail.es</a>
+  <br><br>
+  Proyecto personal e independiente. No está vinculado, patrocinado ni respaldado por ningún organismo público.
+  El contenido es orientativo: consulta siempre la convocatoria oficial que te corresponda.
+</div></footer>
+<script>document.getElementById('y').textContent=new Date().getFullYear();</script>
+</body></html>
