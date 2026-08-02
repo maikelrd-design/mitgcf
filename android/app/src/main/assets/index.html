@@ -510,6 +510,8 @@ function defaults(){
     videos:{},
     plan: planDefecto(),
     planes: planesDefecto(),
+    edadMinima: 18,
+    edadMaxima: 75,
     licencia: {activa:true, producto:'Planes de entrenamiento', precio:'3,99 €',
                codigos:['TGCF-2026'], desbloqueado:false,
                gancho:'Doce semanas de entrenamiento hechas a la medida de tus marcas, con seis planes según tu nivel y tu objetivo.'}
@@ -530,6 +532,8 @@ if(!CFG || CFG.version!==4) CFG = defaults();
 if(!CFG.plan) CFG.plan = planDefecto();
 if(!CFG.planes || !CFG.planes.length) CFG.planes = planesDefecto();
 if(!CFG.licencia) CFG.licencia = defaults().licencia;
+if(!CFG.edadMinima) CFG.edadMinima = 18;
+if(!CFG.edadMaxima) CFG.edadMaxima = 75;
 if(!CFG.autor) CFG.autor = defaults().autor;
 if(!CFG.videos) CFG.videos = {};
 function guardaCFG(){ store.set('cfg', CFG); }
@@ -758,8 +762,13 @@ function secReglas(){
         <option value="truncar"${CFG.redondeo==='truncar'?' selected':''}>Truncar (por defecto)</option>
         <option value="redondear"${CFG.redondeo==='redondear'?' selected':''}>Redondear</option></select></div>
     </div>
+    <div class="row" style="margin-top:9px">
+      <div><label>Edad mínima admitida</label><input type="number" min="14" max="40" data-cfg="edadMinima" data-num="1" value="${CFG.edadMinima}"></div>
+      <div><label>Edad máxima admitida</label><input type="number" min="40" max="99" data-cfg="edadMaxima" data-num="1" value="${CFG.edadMaxima}"></div>
+    </div>
     <div class="hint">Valores por defecto: mínimo <b>20</b> puntos, nota = media ÷ <b>10</b> con <b>3</b> decimales truncados,
-      y cada nivel del perfil es una decena de puntos.</div>
+      y cada nivel del perfil es una decena de puntos. La aplicación no calcula nada por debajo de la edad mínima
+      (<b>18</b> años de fábrica).</div>
   </div>
   <div class="card"><h2><span class="num">2</span>Cualidades del perfil físico</h2>
     ${CFG.cualidades.map((c,i)=>`<div class="row" style="margin-bottom:7px">
@@ -1243,18 +1252,36 @@ function cabeceraDatos(){
       <div style="flex:.8"><label>Año de nacimiento</label>
         <input id="yAnio" type="number" min="1940" max="${anioActual()}" inputmode="numeric" placeholder="1983" value="${esc(yo.anio||'')}"></div>
       <div style="flex:.8"><label>Edad que cumples en el año en curso</label>
-        <input id="yEdad" type="number" min="15" max="75" inputmode="numeric" value="${yo.edad}"></div>
+        <input id="yEdad" type="number" min="${CFG.edadMinima}" max="${CFG.edadMaxima}" inputmode="numeric"
+               placeholder="${CFG.edadMinima} o más" value="${yo.edad||''}"></div>
     </div>
     <div class="hint">Para el test cuenta la edad que cumples <b>durante el año en curso</b>, no la que tienes hoy.
-      Si pones el año de nacimiento se calcula sola. Tramo: <b>${tramoDe(yo.edad)}</b> · ${evaluar(yo).usadas.length} pruebas.</div>
+      Si pones el año de nacimiento se calcula sola.
+      ${edadValida(yo.edad)
+        ? `Tramo: <b>${tramoDe(yo.edad)}</b> · ${evaluar(yo).usadas.length} pruebas.`
+        : `<b class="mal">Falta tu edad</b> (de ${CFG.edadMinima} a ${CFG.edadMaxima} años) para poder calcular nada.`}</div>
   </div>`;
 }
+const edadValida = e => { e=parseInt(e,10); return !isNaN(e) && e>=CFG.edadMinima && e<=CFG.edadMaxima; };
+function aplicaEdad(v){ yo.edad = edadValida(v) ? parseInt(v,10) : 0; guardaYo(); }
+
 function bindDatos(repinta){
   $('yNom').oninput=e=>{ yo.nom=e.target.value; guardaYo(); };
   $('ySexo').onchange=e=>{ yo.sexo=e.target.value; guardaYo(); repinta(); };
-  $('yEdad').oninput=e=>{ yo.edad=+e.target.value||0; yo.anio=''; guardaYo(); repinta(); };
-  $('yAnio').oninput=e=>{ const v=e.target.value.trim(), ed=edadDeAnio(v);
-    yo.anio=v; if(ed!==null) yo.edad=ed; guardaYo(); if(ed!==null) repinta(); };
+
+  /* La edad NO repinta mientras se escribe. Si lo hiciera, al teclear el primer dígito
+     se reconstruiría el campo, se perdería el foco y sería imposible escribir el segundo.
+     Se aplica al salir del campo o al pulsar Intro. */
+  const ed=$('yEdad');
+  ed.oninput = ()=>{ yo.anio=''; const a=$('yAnio'); if(a) a.value=''; };
+  ed.onblur   = ()=>{ aplicaEdad(ed.value); repinta(); };
+  ed.onkeydown= e=>{ if(e.key==='Enter'){ e.preventDefault(); ed.blur(); } };
+
+  const an=$('yAnio');
+  an.oninput  = e=>{ yo.anio=e.target.value.trim(); };
+  an.onblur   = e=>{ const v=e.target.value.trim(), x=edadDeAnio(v);
+                     yo.anio=v; if(x!==null) aplicaEdad(x); guardaYo(); repinta(); };
+  an.onkeydown= e=>{ if(e.key==='Enter'){ e.preventDefault(); an.blur(); } };
 }
 
 /* ------------------------------------------------ 1. MI TEST */
