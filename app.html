@@ -510,6 +510,8 @@ function defaults(){
     videos:{},
     plan: planDefecto(),
     planes: planesDefecto(),
+    edadMinima: 18,
+    edadMaxima: 75,
     licencia: {activa:true, producto:'Planes de entrenamiento', precio:'3,99 €',
                codigos:['TGCF-2026'], desbloqueado:false,
                gancho:'Doce semanas de entrenamiento hechas a la medida de tus marcas, con seis planes según tu nivel y tu objetivo.'}
@@ -530,6 +532,8 @@ if(!CFG || CFG.version!==4) CFG = defaults();
 if(!CFG.plan) CFG.plan = planDefecto();
 if(!CFG.planes || !CFG.planes.length) CFG.planes = planesDefecto();
 if(!CFG.licencia) CFG.licencia = defaults().licencia;
+if(!CFG.edadMinima) CFG.edadMinima = 18;
+if(!CFG.edadMaxima) CFG.edadMaxima = 75;
 if(!CFG.autor) CFG.autor = defaults().autor;
 if(!CFG.videos) CFG.videos = {};
 function guardaCFG(){ store.set('cfg', CFG); }
@@ -758,8 +762,13 @@ function secReglas(){
         <option value="truncar"${CFG.redondeo==='truncar'?' selected':''}>Truncar (por defecto)</option>
         <option value="redondear"${CFG.redondeo==='redondear'?' selected':''}>Redondear</option></select></div>
     </div>
+    <div class="row" style="margin-top:9px">
+      <div><label>Edad mínima admitida</label><input type="number" min="14" max="40" data-cfg="edadMinima" data-num="1" value="${CFG.edadMinima}"></div>
+      <div><label>Edad máxima admitida</label><input type="number" min="40" max="99" data-cfg="edadMaxima" data-num="1" value="${CFG.edadMaxima}"></div>
+    </div>
     <div class="hint">Valores por defecto: mínimo <b>20</b> puntos, nota = media ÷ <b>10</b> con <b>3</b> decimales truncados,
-      y cada nivel del perfil es una decena de puntos.</div>
+      y cada nivel del perfil es una decena de puntos. La aplicación no calcula nada por debajo de la edad mínima
+      (<b>18</b> años de fábrica).</div>
   </div>
   <div class="card"><h2><span class="num">2</span>Cualidades del perfil físico</h2>
     ${CFG.cualidades.map((c,i)=>`<div class="row" style="margin-bottom:7px">
@@ -1243,18 +1252,36 @@ function cabeceraDatos(){
       <div style="flex:.8"><label>Año de nacimiento</label>
         <input id="yAnio" type="number" min="1940" max="${anioActual()}" inputmode="numeric" placeholder="1983" value="${esc(yo.anio||'')}"></div>
       <div style="flex:.8"><label>Edad que cumples en el año en curso</label>
-        <input id="yEdad" type="number" min="15" max="75" inputmode="numeric" value="${yo.edad}"></div>
+        <input id="yEdad" type="number" min="${CFG.edadMinima}" max="${CFG.edadMaxima}" inputmode="numeric"
+               placeholder="${CFG.edadMinima} o más" value="${yo.edad||''}"></div>
     </div>
     <div class="hint">Para el test cuenta la edad que cumples <b>durante el año en curso</b>, no la que tienes hoy.
-      Si pones el año de nacimiento se calcula sola. Tramo: <b>${tramoDe(yo.edad)}</b> · ${evaluar(yo).usadas.length} pruebas.</div>
+      Si pones el año de nacimiento se calcula sola.
+      ${edadValida(yo.edad)
+        ? `Tramo: <b>${tramoDe(yo.edad)}</b> · ${evaluar(yo).usadas.length} pruebas.`
+        : `<b class="mal">Falta tu edad</b> (de ${CFG.edadMinima} a ${CFG.edadMaxima} años) para poder calcular nada.`}</div>
   </div>`;
 }
+const edadValida = e => { e=parseInt(e,10); return !isNaN(e) && e>=CFG.edadMinima && e<=CFG.edadMaxima; };
+function aplicaEdad(v){ yo.edad = edadValida(v) ? parseInt(v,10) : 0; guardaYo(); }
+
 function bindDatos(repinta){
   $('yNom').oninput=e=>{ yo.nom=e.target.value; guardaYo(); };
   $('ySexo').onchange=e=>{ yo.sexo=e.target.value; guardaYo(); repinta(); };
-  $('yEdad').oninput=e=>{ yo.edad=+e.target.value||0; yo.anio=''; guardaYo(); repinta(); };
-  $('yAnio').oninput=e=>{ const v=e.target.value.trim(), ed=edadDeAnio(v);
-    yo.anio=v; if(ed!==null) yo.edad=ed; guardaYo(); if(ed!==null) repinta(); };
+
+  /* La edad NO repinta mientras se escribe. Si lo hiciera, al teclear el primer dígito
+     se reconstruiría el campo, se perdería el foco y sería imposible escribir el segundo.
+     Se aplica al salir del campo o al pulsar Intro. */
+  const ed=$('yEdad');
+  ed.oninput = ()=>{ yo.anio=''; const a=$('yAnio'); if(a) a.value=''; };
+  ed.onblur   = ()=>{ aplicaEdad(ed.value); repinta(); };
+  ed.onkeydown= e=>{ if(e.key==='Enter'){ e.preventDefault(); ed.blur(); } };
+
+  const an=$('yAnio');
+  an.oninput  = e=>{ yo.anio=e.target.value.trim(); };
+  an.onblur   = e=>{ const v=e.target.value.trim(), x=edadDeAnio(v);
+                     yo.anio=v; if(x!==null) aplicaEdad(x); guardaYo(); repinta(); };
+  an.onkeydown= e=>{ if(e.key==='Enter'){ e.preventDefault(); an.blur(); } };
 }
 
 /* ------------------------------------------------ 1. MI TEST */
@@ -1495,7 +1522,26 @@ function vistaObj(){
 
 /* ------------------------------------------------ 4. PLANES DE ENTRENAMIENTO */
 let lic = store.get('lic', {ok:false, fecha:''});
-const desbloqueado = () => !CFG.licencia.activa || CFG.licencia.desbloqueado || lic.ok;
+
+/* --- puente con la Facturación de Google Play (solo dentro de la app de Android) --- */
+const nativo = () => (typeof AndroidBilling!=='undefined' && AndroidBilling);
+let licNat = {ok:false, listo:false};
+let precioNat = '';
+if(nativo()){
+  try{ const d=JSON.parse(AndroidBilling.estado()||'{}');
+       licNat={ok:!!d.comprado, listo:!!d.listo}; precioNat=d.precio||''; }catch(e){}
+}
+/* Android llama a esta función cada vez que cambia el estado de la compra */
+window.billingCambia = function(json){
+  try{ const d = (typeof json==='string') ? JSON.parse(json) : (json||{});
+       licNat={ok:!!d.comprado, listo:!!d.listo};
+       if(d.precio) precioNat=d.precio;
+       if(vista==='plan') vistaPlan();
+       else if(vista==='inicio' && typeof vistaInicio==='function') vistaInicio();
+  }catch(e){}
+};
+const precioMostrado = () => precioNat || CFG.licencia.precio;
+const desbloqueado = () => !CFG.licencia.activa || CFG.licencia.desbloqueado || lic.ok || licNat.ok;
 
 function ritmoTxt(segKm){ segKm=Math.max(120,Math.round(segKm));
   return Math.floor(segKm/60)+':'+String(segKm%60).padStart(2,'0')+'/km'; }
@@ -1891,7 +1937,7 @@ function vistaPlanBloqueado(){
         <div style="font-weight:700;font-size:17px">${esc(L.producto)}</div>
         <div style="font-size:12px;color:var(--dim);margin-top:3px">${esc(L.gancho)}</div>
       </div>
-      <div style="text-align:right"><div class="precio">${esc(L.precio)}</div>
+      <div style="text-align:right"><div class="precio">${esc(precioMostrado())}</div>
         <div style="font-size:9.5px;color:var(--dim);letter-spacing:.8px;font-weight:700">PAGO ÚNICO</div></div>
     </div>
     <ul>
@@ -1904,8 +1950,8 @@ function vistaPlanBloqueado(){
       <li>Marca cada sesión según la completas y llévate el plan impreso.</li>
     </ul>
     <div class="row" style="margin-top:14px">
-      <button class="btn p" style="flex:2" onclick="comprar()">Desbloquear por ${esc(L.precio)}</button>
-      <button class="btn" onclick="canjear()">Tengo un código</button>
+      <button class="btn p" style="flex:2" onclick="comprar()">Desbloquear por ${esc(precioMostrado())}</button>
+      <button class="btn" onclick="${nativo()?'restaurar()':'canjear()'}">${nativo()?'Ya lo compré':'Tengo un código'}</button>
     </div>
     <div class="hint">El resto de la aplicación —calculadora, simulador, objetivos, tablas e historial— sigue siendo gratis.</div>
   </div>
@@ -1931,11 +1977,22 @@ function vistaPlanBloqueado(){
   </div>`;
 }
 function comprar(){
-  /* En la app nativa este punto llama a la Facturación de Google Play.
-     En el prototipo se simula la compra para poder probar los dos estados. */
-  if(!confirm('Simular la compra de «'+CFG.licencia.producto+'» por '+CFG.licencia.precio+'?\n\n'
+  if(nativo()){
+    try{ AndroidBilling.comprar(); }
+    catch(e){ alert('No se ha podido abrir el pago de Google Play. Comprueba tu conexión e inténtalo de nuevo.'); }
+    return;
+  }
+  /* fuera de la app de Android se simula, para poder probar los dos estados */
+  if(!confirm('Simular la compra de «'+CFG.licencia.producto+'» por '+precioMostrado()+'?\n\n'
     +'En la aplicación publicada aquí se abriría el pago de Google Play.')) return;
   lic={ok:true, fecha:hoyISO()}; store.set('lic',lic); vistaPlan();
+}
+function restaurar(){
+  if(!nativo()){ alert('Esta opción solo funciona dentro de la aplicación de Android.'); return; }
+  try{ AndroidBilling.restaurar(); }catch(e){}
+  setTimeout(()=>{ if(licNat.ok) alert('Compra recuperada. Ya tienes los planes.');
+                   else alert('No hemos encontrado ninguna compra en esta cuenta de Google.\n\n'
+                     +'Comprueba que estás usando la misma cuenta con la que compraste.'); }, 900);
 }
 function canjear(){
   const c=prompt('Introduce tu código de desbloqueo:');
