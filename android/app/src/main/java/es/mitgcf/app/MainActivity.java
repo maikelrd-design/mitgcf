@@ -1,22 +1,32 @@
 package es.mitgcf.app;
 
+import android.content.ContentValues;
 import android.content.Intent;
-import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.MediaStore;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
+import android.webkit.JsPromptResult;
+import android.webkit.JsResult;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -38,6 +48,8 @@ import com.android.billingclient.api.QueryPurchasesParams;
 
 import org.json.JSONObject;
 
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 
@@ -48,8 +60,13 @@ import java.util.List;
  * WebViewAssetLoader bajo un origen https real, y no file://, para que el almacenamiento
  * local del navegador funcione de forma fiable y los datos del usuario no se pierdan.
  *
+ * Un WebView pelado NO sabe atender los avisos, las preguntas de sí/no, los cuadros de
+ * texto, la selección de archivos ni las descargas de la página: hay que resolverlos aquí
+ * con diálogos y ficheros nativos. De eso se ocupa el WebChromeClient y el puente
+ * AndroidArchivo.
+ *
  * Los planes de entrenamiento se desbloquean con una compra única gestionada por la
- * Facturación de Google Play. El puente hacia la página se llama AndroidBilling.
+ * Facturación de Google Play, a través del puente AndroidBilling.
  *
  * Maikel Rodríguez Domínguez.
  */
@@ -69,6 +86,16 @@ public class MainActivity extends AppCompatActivity implements PurchasesUpdatedL
     private volatile boolean listo = false;
     private volatile String precio = "";
     private ProductDetails detalles = null;
+
+    /** Selección de archivos para los <input type="file"> de la página. */
+    private ValueCallback<Uri[]> esperandoArchivos;
+    private final ActivityResultLauncher<Intent> selectorArchivos =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), r -> {
+                if (esperandoArchivos == null) return;
+                esperandoArchivos.onReceiveValue(
+                        WebChromeClient.FileChooserParams.parseResult(r.getResultCode(), r.getData()));
+                esperandoArchivos = null;
+            });
 
     // ----------------------------------------------------------------- ciclo de vida
 
@@ -108,8 +135,7 @@ public class MainActivity extends AppCompatActivity implements PurchasesUpdatedL
     @Override
     protected void onResume() {
         super.onResume();
-        // Recupera compras hechas en otro dispositivo o tras reinstalar.
-        consultaCompras();
+        consultaCompras();   // recupera compras hechas en otro dispositivo o tras reinstalar
     }
 
     @Override
@@ -117,10 +143,7 @@ public class MainActivity extends AppCompatActivity implements PurchasesUpdatedL
         if (facturacion != null) {
             try { facturacion.endConnection(); } catch (Exception ignorada) { }
         }
-        if (web != null) {
-            web.destroy();
-            web = null;
-        }
+        if (web != null) { web.destroy(); web = null; }
         super.onDestroy();
     }
 
@@ -142,6 +165,7 @@ public class MainActivity extends AppCompatActivity implements PurchasesUpdatedL
 
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
         web.addJavascriptInterface(new Puente(), "AndroidBilling");
+        web.addJavascriptInterface(new Archivos(), "AndroidArchivo");
 
         final WebViewAssetLoader cargador = new WebViewAssetLoader.Builder()
                 .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
@@ -157,14 +181,72 @@ public class MainActivity extends AppCompatActivity implements PurchasesUpdatedL
             public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest p) {
                 Uri u = p.getUrl();
                 if (u != null && ORIGEN.equals(u.getScheme() + "://" + u.getHost())) return false;
-                // Los vídeos de los ejercicios y cualquier enlace externo salen al navegador.
-                abreFuera(u);
+                abreFuera(u);   // los vídeos y enlaces externos salen al navegador
                 return true;
             }
 
             @Override
-            public void onPageFinished(WebView v, String url) {
-                avisaWeb();
+            public void onPageFinished(WebView v, String url) { avisaWeb(); }
+        });
+
+        // Sin esto, la página no puede avisar, preguntar, pedir un dato ni abrir archivos.
+        web.setWebChromeClient(new WebChromeClient() {
+
+            @Override
+            public boolean onJsAlert(WebView v, String url, String mensaje, JsResult res) {
+                new AlertDialog.Builder(MainActivity.this)
+                        .setMessage(mensaje)
+                        .setPositiveButton("Aceptar", (d, w) -> res.confirm())
+                        .setOnCancelListener(d -> res.cancel())
+                        .show();
+                return true;
+            }
+
+            @Override
+            public boolean onJsConfirm(WebView v, String url, String mensaje, JsResult res) {
+                new AlertDialog.Builder(MainActivity.this)
+                        .setMessage(mensaje)
+                        .setPositiveButton("Aceptar", (d, w) -> res.confirm())
+                        .setNegativeButton("Cancelar", (d, w) -> res.cancel())
+                        .setOnCancelListener(d -> res.cancel())
+                        .show();
+                return true;
+            }
+
+            @Override
+            public boolean onJsPrompt(WebView v, String url, String mensaje,
+                                      String pordefecto, JsPromptResult res) {
+                final EditText campo = new EditText(MainActivity.this);
+                campo.setSingleLine(true);
+                if (pordefecto != null) campo.setText(pordefecto);
+                int m = (int) (18 * getResources().getDisplayMetrics().density);
+                FrameLayout caja = new FrameLayout(MainActivity.this);
+                caja.setPadding(m, m / 2, m, 0);
+                caja.addView(campo);
+                new AlertDialog.Builder(MainActivity.this)
+                        .setMessage(mensaje)
+                        .setView(caja)
+                        .setPositiveButton("Aceptar", (d, w) -> res.confirm(campo.getText().toString()))
+                        .setNegativeButton("Cancelar", (d, w) -> res.cancel())
+                        .setOnCancelListener(d -> res.cancel())
+                        .show();
+                campo.requestFocus();
+                return true;
+            }
+
+            @Override
+            public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> cb,
+                                             FileChooserParams params) {
+                if (esperandoArchivos != null) esperandoArchivos.onReceiveValue(null);
+                esperandoArchivos = cb;
+                try {
+                    selectorArchivos.launch(params.createIntent());
+                } catch (Exception e) {
+                    esperandoArchivos = null;
+                    aviso("No se ha podido abrir el selector de archivos.");
+                    return false;
+                }
+                return true;
             }
         });
 
@@ -180,6 +262,10 @@ public class MainActivity extends AppCompatActivity implements PurchasesUpdatedL
         } catch (Exception ignorada) { }
     }
 
+    private void aviso(String t) {
+        hilo.post(() -> Toast.makeText(MainActivity.this, t, Toast.LENGTH_LONG).show());
+    }
+
     /** El botón «atrás» vuelve a Inicio; si ya está en Inicio, sale de la aplicación. */
     private void atras() {
         if (web == null) { finish(); return; }
@@ -189,6 +275,39 @@ public class MainActivity extends AppCompatActivity implements PurchasesUpdatedL
                     String v = valor == null ? "0" : valor.replace("\"", "").trim();
                     if (!"1".equals(v)) finish();
                 });
+    }
+
+    // ----------------------------------------------------------------- guardar archivos
+
+    /** Escribe en la carpeta Descargas del móvil. No necesita permisos en Android 10 o superior. */
+    public class Archivos {
+        @JavascriptInterface
+        public String guardar(String nombre, String contenido, String tipo) {
+            if (nombre == null || nombre.isEmpty()) nombre = "mi-tgcf.txt";
+            try {
+                ContentValues cv = new ContentValues();
+                cv.put(MediaStore.Downloads.DISPLAY_NAME, nombre);
+                cv.put(MediaStore.Downloads.MIME_TYPE,
+                        (tipo == null || tipo.isEmpty()) ? "application/octet-stream" : tipo);
+                cv.put(MediaStore.Downloads.IS_PENDING, 1);
+
+                Uri destino = getContentResolver()
+                        .insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv);
+                if (destino == null) return "";
+
+                OutputStream os = getContentResolver().openOutputStream(destino);
+                if (os == null) return "";
+                os.write(contenido == null ? new byte[0] : contenido.getBytes(StandardCharsets.UTF_8));
+                os.close();
+
+                cv.clear();
+                cv.put(MediaStore.Downloads.IS_PENDING, 0);
+                getContentResolver().update(destino, cv, null, null);
+                return nombre;
+            } catch (Exception e) {
+                return "";
+            }
+        }
     }
 
     // ----------------------------------------------------------------- facturación
@@ -214,19 +333,14 @@ public class MainActivity extends AppCompatActivity implements PurchasesUpdatedL
                     reintenta(intento);
                 }
             }
-
             @Override
-            public void onBillingServiceDisconnected() {
-                listo = false;
-                reintenta(intento);
-            }
+            public void onBillingServiceDisconnected() { listo = false; reintenta(intento); }
         });
     }
 
     private void reintenta(int intento) {
         if (intento >= 4) { avisaWeb(); return; }
-        long espera = 1000L * (1L << intento);          // 1 s, 2 s, 4 s, 8 s
-        hilo.postDelayed(() -> arranca(intento + 1), espera);
+        hilo.postDelayed(() -> arranca(intento + 1), 1000L * (1L << intento));
     }
 
     private void consultaDetalles() {
@@ -279,8 +393,7 @@ public class MainActivity extends AppCompatActivity implements PurchasesUpdatedL
         if (c.isAcknowledged()) return;
         facturacion.acknowledgePurchase(
                 AcknowledgePurchaseParams.newBuilder()
-                        .setPurchaseToken(c.getPurchaseToken()).build(),
-                r -> { });
+                        .setPurchaseToken(c.getPurchaseToken()).build(), r -> { });
     }
 
     @Override
