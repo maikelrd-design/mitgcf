@@ -1202,6 +1202,14 @@ function subePortada(input){
 }
 function quitaPortada(){ CFG.portada=''; guardaCFG(); pintaAdminBody(); }
 function descarga(nombre, contenido, tipo){
+  /* Dentro de la app de Android no existe la descarga del navegador: el archivo lo
+     escribe el propio sistema en la carpeta Descargas a través del puente nativo. */
+  if(typeof AndroidArchivo!=='undefined' && AndroidArchivo){
+    let r=''; try{ r=AndroidArchivo.guardar(nombre, contenido, tipo||'text/plain'); }catch(e){}
+    alert(r ? 'Guardado en la carpeta Descargas del móvil:\n\n'+r
+            : 'No se ha podido guardar el archivo.');
+    return;
+  }
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([contenido],{type:tipo}));
   a.download=nombre; a.click(); }
