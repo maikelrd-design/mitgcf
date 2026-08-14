@@ -2,4 +2,7 @@
 -keepclassmembers class es.mitgcf.app.MainActivity$Puente {
     public *;
 }
+-keepclassmembers class es.mitgcf.app.MainActivity$Archivos {
+    public *;
+}
 -keepattributes JavascriptInterface
