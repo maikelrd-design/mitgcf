@@ -31,7 +31,7 @@ body{padding-bottom:40px}
 h1,h2,h3{margin:0;font-weight:700}
 svg{display:block}
 header{position:sticky;top:0;z-index:60;background:linear-gradient(135deg,var(--navy3),var(--navy2));
-  color:#fff;padding:11px 13px 9px;box-shadow:var(--shadow)}
+  color:#fff;padding:calc(11px + env(safe-area-inset-top,0px)) 13px 9px;box-shadow:var(--shadow)}
 .hrow{display:flex;align-items:center;gap:11px}
 .logo{width:42px;height:42px;flex:0 0 42px}
 .hrow h1{font-size:16.5px;letter-spacing:.2px;line-height:1.15}
@@ -99,6 +99,16 @@ details.ck summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--acc
 html[data-theme="light"] details.ck summary{color:var(--navy2)}
 details.ck summary::-webkit-details-marker{display:none}
 details.ck summary::before{content:"⏱ "}
+/* Bloque de datos plegado: en las pantallas que solo consultan la edad y el sexo se
+   muestra un resumen de una línea y los campos quedan a un toque. */
+details.datos>summary{cursor:pointer;list-style:none;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+details.datos>summary::-webkit-details-marker{display:none}
+details.datos>summary::after{content:"▾";margin-left:auto;color:var(--dim);font-size:13px}
+details.datos[open]>summary::after{content:"▴"}
+details.datos>summary b{font-size:15px;font-weight:700}
+details.datos>summary span{color:var(--dim);font-size:12.5px}
+details.datos>summary span.mal{color:var(--bad);font-weight:700}
+details.datos>.row:first-of-type{margin-top:11px}
 .clock{font-variant-numeric:tabular-nums;font-weight:800;font-size:36px;letter-spacing:1px;text-align:center;padding:8px 0 4px}
 .clock.run{color:var(--acc2)}
 html[data-theme="light"] .clock.run{color:var(--navy2)}
@@ -321,23 +331,23 @@ const LOGO = '<svg viewBox="0 0 512 512" fill="none">'
 /* ==================================================================
    PLANES DE ENTRENAMIENTO
    Marco metodológico:
-   · Resistencia — métodos continuos e interválicos y sus parámetros de carga
+   · Resistencia: métodos continuos e interválicos y sus parámetros de carga
      (Navarro; García Manso, Casado y Navarro, Máster COE). Distribución de
      intensidades con 70-80 % del volumen por debajo del primer umbral y
      evolución de piramidal a polarizado (Stöggl y Sperlich; Seiler).
    · Ritmos derivados de la VAM estimada desde la marca de 2.000 m
      (vVO2max sostenible 4-8 min; test progresivo VAM = Vmáx − 8 %).
-   · Fuerza — carácter del esfuerzo X(Y): repeticiones realizadas sobre las
+   · Fuerza: carácter del esfuerzo X(Y): repeticiones realizadas sobre las
      realizables, sin llegar nunca al fallo, máxima velocidad de ejecución
      intencionada y recuperaciones completas (González-Badillo y Gorostiaga;
      González-Badillo y Sánchez-Medina).
-   · Entrenamiento concurrente — fuerza antes que resistencia, separación de
+   · Entrenamiento concurrente: fuerza antes que resistencia, separación de
      sesiones, series de 6-8 repeticiones cuando la resistencia va a umbral y
      de 2-4 cuando va por encima, nunca con carácter del esfuerzo máximo.
-   · Velocidad y cambios de dirección — series de unos 10 s a intensidad
+   · Velocidad y cambios de dirección: series de unos 10 s a intensidad
      máxima con recuperación completa y estímulo visual; arrastres de 20-30 m
      con el 5-12 % del peso corporal.
-   · Control de la carga — s-RPE (Foster): RPE 0-10 × minutos de sesión.
+   · Control de la carga: s-RPE (Foster): RPE 0-10 × minutos de sesión.
    ================================================================== */
 /* Catálogo de ejercicios que pueden llevar vídeo de ejecución.
    Los enlaces se rellenan desde Admin → Vídeos; si están vacíos no se muestra nada. */
@@ -1240,8 +1250,12 @@ function ringHTML(nota){
     <circle class="fgc" cx="60" cy="60" r="52" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/></svg>
     <div class="lbl"><div><b>${notaTxt(nota)}</b><span>NOTA / 10</span></div></div></div>`;
 }
-function cabeceraDatos(){
-  return `<div class="card"><h2><span class="num">1</span>Tus datos</h2>
+/* El mismo dato de sexo y edad lo necesitan cuatro pantallas. En Mi test el bloque va
+   abierto, porque es donde se rellena; en las demás va plegado para no repetir el
+   formulario entero: se ve el resumen y los campos se abren solo si hay que corregir. */
+let datosAbierto = false;
+function cabeceraDatos(plegado){
+  const campos = `
     <div class="row">
       <div style="flex:1.5"><label>Nombre (opcional)</label><input id="yNom" placeholder="Solo para tus registros" value="${esc(yo.nom||'')}"></div>
       <div style="flex:.7"><label>Sexo</label><select id="ySexo">
@@ -1259,13 +1273,25 @@ function cabeceraDatos(){
       Si pones el año de nacimiento se calcula sola.
       ${edadValida(yo.edad)
         ? `Tramo: <b>${tramoDe(yo.edad)}</b> · ${evaluar(yo).usadas.length} pruebas.`
-        : `<b class="mal">Falta tu edad</b> (de ${CFG.edadMinima} a ${CFG.edadMaxima} años) para poder calcular nada.`}</div>
-  </div>`;
+        : `<b class="mal">Falta tu edad</b> (de ${CFG.edadMinima} a ${CFG.edadMaxima} años) para poder calcular nada.`}</div>`;
+
+  if(!plegado) return `<div class="card"><h2><span class="num">1</span>Tus datos</h2>${campos}</div>`;
+
+  const resumen = edadValida(yo.edad)
+    ? `<span>${yo.sexo==='F'?'Femenino':'Masculino'} · ${yo.edad} años · tramo ${tramoDe(yo.edad)}</span>`
+    : `<span class="mal">Falta tu edad</span>`;
+  return `<details class="card datos"${datosAbierto?' open':''}>
+    <summary><b>Tus datos</b>${resumen}</summary>${campos}</details>`;
 }
 const edadValida = e => { e=parseInt(e,10); return !isNaN(e) && e>=CFG.edadMinima && e<=CFG.edadMaxima; };
 function aplicaEdad(v){ yo.edad = edadValida(v) ? parseInt(v,10) : 0; guardaYo(); }
 
 function bindDatos(repinta){
+  /* Si el bloque está plegado, recordamos si el usuario lo dejó abierto para que no se
+     cierre solo cada vez que la pantalla se vuelve a dibujar. */
+  const dt=document.querySelector('details.datos');
+  if(dt) dt.ontoggle=()=>{ datosAbierto=dt.open; };
+
   $('yNom').oninput=e=>{ yo.nom=e.target.value; guardaYo(); };
   $('ySexo').onchange=e=>{ yo.sexo=e.target.value; guardaYo(); repinta(); };
 
@@ -1405,7 +1431,7 @@ function ckSave(pid){ const p=pr(pid),c=ck(pid); cronoStop(c);
 let sim = {pid:null, idx:0};
 function vistaSim(){
   const act = CFG.pruebas.filter(p=>aplicable(p,yo.edad,yo.sexo));
-  if(!act.length){ $('main').innerHTML=cabeceraDatos()+'<div class="card"><div class="empty">No hay pruebas aplicables.</div></div>'; bindDatos(vistaSim); return; }
+  if(!act.length){ $('main').innerHTML=cabeceraDatos(true)+'<div class="card"><div class="empty">No hay pruebas aplicables.</div></div>'; bindDatos(vistaSim); return; }
   if(!sim.pid||!act.some(p=>p.id===sim.pid)) { sim.pid=act[0].id; sim.idx=-1; }
   const p=pr(sim.pid), ks=clavesDe(p);
   if(sim.idx<0||sim.idx>=ks.length){
@@ -1419,7 +1445,7 @@ function vistaSim(){
   const simMarcas=clone(yo.marcas); simMarcas[p.id]=marca;
   const rSim=evaluar({sexo:yo.sexo, edad:yo.edad, marcas:simMarcas});
   const hitos=[CFG.minPuntos,50,70,90,100].map(o=>({o, m:marcaPara(p,o,yo.sexo,yo.edad)}));
-  $('main').innerHTML = cabeceraDatos() + `
+  $('main').innerHTML = cabeceraDatos(true) + `
   <div class="card"><h2><span class="num">2</span>Simulador de marca</h2>
     <div class="row">
       <div><label>Prueba</label><select id="sP">${act.map(x=>`<option value="${x.id}"${x.id===p.id?' selected':''}>${esc(x.nombre)}</option>`).join('')}</select></div>
@@ -1472,7 +1498,7 @@ function vistaObj(){
   const totalNec = objPts*usadas.length;
   const totalAct = usadas.reduce((a,p)=>a+(r.pts[p.id]||0),0);
   const falta = Math.max(0, totalNec-totalAct);
-  $('main').innerHTML = cabeceraDatos() + `
+  $('main').innerHTML = cabeceraDatos(true) + `
   <div class="card"><h2><span class="num">2</span>Tu objetivo</h2>
     <div class="row">
       <div><label>Meta</label><select id="oModo">
@@ -1646,7 +1672,7 @@ function sesion(id, ctx){
   if(id==='fuerzaCore') return {t:'Fuerza aplicada y core', d:'55 min', rpe:pl.rpe.fuerza, it:[
     ['Calentamiento 10 min en zona 1 y movilidad de hombro, escápula y cadera.','calent'],
     [`Empuje horizontal (flexiones lastradas, pies elevados o press de banca): <b>${s.serFuerza} × ${s.repFuerza} rep</b>,
-     carácter del esfuerzo <b>${s.repFuerza}(${ceMax})</b> — elige la dificultad con la que podrías hacer ${ceMax} y quédate en ${s.repFuerza}.
+     carácter del esfuerzo <b>${s.repFuerza}(${ceMax})</b>: elige la dificultad con la que podrías hacer ${ceMax} y quédate en ${s.repFuerza}.
      Recuperación ${dur(rec('fuerza'))}. Máxima velocidad intencionada en cada repetición.`,'flexoLastre'],
     [`Tracción (dominadas, remo invertido o remo con barra): <b>${s.serFuerza} × ${s.repFuerza} rep</b>, mismo carácter del esfuerzo y misma recuperación.`,'dominadas'],
     [`Flexo-extensiones del test: <b>3 × ${nFlex} rep</b> a máxima velocidad, recuperación ${dur(rec('especifico'))}. Parar con margen: nunca al fallo.`,'flexo'],
@@ -1738,7 +1764,7 @@ function vistaPlan(){
   const total=g.semanas.length*g.dias;
   const hechas=cuentaHechas(P.id);
   const V=planCfg.vam||{};
-  $('main').innerHTML = cabeceraDatos() + `
+  $('main').innerHTML = cabeceraDatos(true) + `
   <div class="card"><h2><span class="num">2</span>Elige tu plan</h2>
     <div class="plans">${CFG.planes.map(p=>`
       <div class="plan ${p.id===P.id?'on':''}" onclick="eligePlan('${p.id}')">
@@ -1841,7 +1867,7 @@ function avisoObjetivo(d){
   const ptsReal=pCar?puntos(pCar,tReal,yo.sexo,yo.edad):null;
   return `<div class="mot">Tu objetivo exige bajar los 2.000 m un <b>${pct} %</b> (de ${fmtT(d.t2000Act)} a ${fmtT(d.t2000Obj)}).
     En doce semanas una mejora realista está entre el 5 y el 10 %. Con un 8 % llegarías a <b>${fmtT(tReal)}</b>${ptsReal!==null?`, que son <b>${ptsReal} puntos</b>`:''}.
-    El plan sigue siendo válido —los ritmos se calculan sobre tu nivel de hoy, no sobre la meta—, pero plantéate un objetivo intermedio
+    El plan sigue siendo válido, porque los ritmos se calculan sobre tu nivel de hoy y no sobre la meta, pero plantéate un objetivo intermedio
     y vuelve a subirlo cuando repitas el test.</div>`;
 }
 function semanaHTML(s, muestra){
@@ -1953,7 +1979,7 @@ function vistaPlanBloqueado(){
       <button class="btn p" style="flex:2" onclick="comprar()">Desbloquear por ${esc(precioMostrado())}</button>
       <button class="btn" onclick="${nativo()?'restaurar()':'canjear()'}">${nativo()?'Ya lo compré':'Tengo un código'}</button>
     </div>
-    <div class="hint">El resto de la aplicación —calculadora, simulador, objetivos, tablas e historial— sigue siendo gratis.</div>
+    <div class="hint">El resto de la aplicación sigue siendo gratis: calculadora, simulador, objetivos, tablas e historial.</div>
   </div>
   ${firmaAutor()}
 
