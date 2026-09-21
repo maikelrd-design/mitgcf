@@ -12,6 +12,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <style>
 :root{
+  color-scheme:dark;
   --navy:#16255c; --navy2:#22357a; --navy3:#0f1a42;
   --bg:#0e1738; --bg2:#152250; --card:#1b2a60; --card2:#24356f; --line:#324681;
   --txt:#eef2fb; --dim:#a4b3dc; --acc:#f0c04a; --acc2:#ffd873;
@@ -24,7 +25,7 @@ html[data-theme="light"]{
   --ok:#1d8a56; --bad:#c2382c; --warn:#b57611;
   --shadow:0 3px 12px #16255c1f;
 }
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);
   font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
 body{padding-bottom:calc(40px + var(--sab,0px))}
@@ -36,7 +37,7 @@ header{position:sticky;top:0;z-index:60;background:linear-gradient(135deg,var(--
 .logo{width:42px;height:42px;flex:0 0 42px}
 .hrow h1{font-size:16.5px;letter-spacing:.2px;line-height:1.15}
 .hrow small{display:block;color:#c3cef0;font-weight:500;font-size:11px;margin-top:2px}
-.themebtn{margin-left:auto;flex:0 0 auto;width:38px;height:38px;border-radius:11px;border:1px solid #ffffff33;
+.themebtn{margin-left:auto;flex:0 0 auto;width:44px;height:44px;border-radius:12px;border:1px solid #ffffff33;
   background:#ffffff1a;color:#fff;display:grid;place-items:center;font-size:16px}
 .tabs{display:flex;gap:5px;margin-top:10px;background:#00000026;padding:4px;border-radius:12px;overflow-x:auto}
 .tabs button{flex:1 0 auto;padding:9px 10px;border:0;background:transparent;color:#c3cef0;
@@ -53,7 +54,7 @@ html[data-theme="light"] .card>h2 .num{color:#fff}
 .row>*{flex:1;min-width:0}
 label{display:block;font-size:10.5px;color:var(--dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:.6px;font-weight:600}
 input,select,textarea{width:100%;padding:10px;border:1px solid var(--line);background:var(--bg2);color:var(--txt);
-  border-radius:10px;font-size:15px;font-family:inherit}
+  border-radius:10px;font-size:16px;font-family:inherit}
 input[readonly]{background:transparent;color:var(--dim)}
 input:focus,select:focus{outline:2px solid var(--acc);outline-offset:-1px}
 input[type=range]{-webkit-appearance:none;appearance:none;padding:0;height:30px;background:transparent;border:0}
@@ -70,7 +71,8 @@ button{cursor:pointer;font-family:inherit}
 html[data-theme="light"] .btn.p{color:#fff}
 .btn.d{background:transparent;border-color:#7e3a33;color:#e79c93}
 html[data-theme="light"] .btn.d{border-color:#e0b4ae;color:#a53125}
-.btn.sm{padding:6px 10px;font-size:12px;border-radius:8px}
+.btn.sm{padding:6px 10px;font-size:12px;border-radius:8px;
+  min-width:44px;min-height:44px;display:inline-grid;place-items:center}
 .btn:active{transform:translateY(1px)}
 .hint{font-size:11.5px;color:var(--dim);margin-top:7px;line-height:1.5}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
@@ -204,6 +206,7 @@ html[data-theme="light"] .pay .precio{color:var(--navy2)}
 .plans{display:grid;gap:9px;grid-template-columns:1fr}
 @media(min-width:620px){.plans{grid-template-columns:1fr 1fr}}
 .plan{border:1px solid var(--line);border-radius:13px;background:var(--bg2);padding:12px;cursor:pointer;position:relative}
+.plan:focus-visible,.prox:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 .plan.on{border-color:var(--acc);background:var(--card2)}
 .plan .pt{font-weight:700;font-size:14.5px}
 .plan .pp{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.7px;margin-top:2px;font-weight:700}
@@ -291,6 +294,7 @@ html[data-theme="light"] .rnota b{color:var(--navy2)}
 </style>
 </head>
 <body>
+<div id="avisoVivo" aria-live="polite" role="status" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap"></div>
 
 <header>
   <div class="hrow">
@@ -299,7 +303,7 @@ html[data-theme="light"] .rnota b{color:var(--navy2)}
       <h1 id="hTit">TGCF</h1>
       <small id="hSub"></small>
     </div>
-    <button class="themebtn" onclick="toggleTema()" title="Tema claro/oscuro"><span id="temaIco">☾</span></button>
+    <button class="themebtn" onclick="toggleTema()" title="Tema claro/oscuro" aria-label="Cambiar entre tema claro y oscuro"><span id="temaIco">☾</span></button>
   </div>
   <div class="tabs" id="tabs"></div>
 </header>
@@ -314,6 +318,15 @@ html[data-theme="light"] .rnota b{color:var(--navy2)}
 </div>
 
 <script>
+/* Intro y Espacio activan los bloques que hacen de boton (role="button").
+   Es lo que el navegador ya hace solo con un boton nativo. */
+function teclaActiva(e){
+  if(e.key==='Enter' || e.key===' ' || e.key==='Spacebar'){
+    e.preventDefault();
+    e.currentTarget.click();
+  }
+}
+
 /* ==================================================================
    NÚCLEO COMÚN · tablas de puntuación, motor de cálculo y administrador
    ================================================================== */
@@ -870,7 +883,7 @@ function secTramos(){
         <td><input value="${esc(t.lbl)}" onchange="renTramo(${i},this.value)"></td>
         <td style="width:104px"><input type="number" min="1" max="200" value="${t.max}" onchange="maxTramo(${i},this.value)"></td>
         <td>${desde}–${t.max>=120?'∞':t.max}</td>
-        <td><button class="btn d sm" onclick="delTramo(${i})">×</button></td></tr>`; }).join('')}
+        <td><button class="btn d sm" onclick="delTramo(${i})" aria-label="Borrar este tramo">×</button></td></tr>`; }).join('')}
     </tbody></table>
     <div class="row" style="margin-top:11px"><button class="btn" onclick="addTramo()">+ Añadir tramo</button></div>
     <div class="hint">La etiqueta identifica las columnas de los baremos: al renombrarla se renombra en todas las tablas.
@@ -928,7 +941,7 @@ function secBaremos(){
         <td style="width:118px"><input value="${valorClaveTxt(p,k)}" data-k="${claveTxt(p,k)}" class="bk"></td>
         <td style="width:96px"><input type="number" min="0" max="100" value="${tab[claveTxt(p,k)]??0}" data-k="${claveTxt(p,k)}" class="bv"></td>
         <td class="n">${Math.min(10,Math.floor((tab[claveTxt(p,k)]??0)/CFG.escala))}</td>
-        <td><button class="btn d sm" onclick="delFila('${claveTxt(p,k)}')">×</button></td></tr>`).join('')}
+        <td><button class="btn d sm" onclick="delFila('${claveTxt(p,k)}')" aria-label="Borrar esta fila">×</button></td></tr>`).join('')}
       </tbody></table></div>
     <div class="hint">${ks.length} filas.</div>
   </div>`;
@@ -1788,7 +1801,7 @@ function vistaPlan(){
   $('main').innerHTML = cabeceraDatos(true) + `
   <div class="card"><h2><span class="num">2</span>Elige tu plan</h2>
     <div class="plans">${CFG.planes.map(p=>`
-      <div class="plan ${p.id===P.id?'on':''}" onclick="eligePlan('${p.id}')">
+      <div class="plan ${p.id===P.id?'on':''}" onclick="eligePlan('${p.id}')" role="button" tabindex="0" onkeydown="teclaActiva(event)" aria-pressed="${p.id===P.id}" aria-label="Elegir el plan ${esc(p.nombre)}">
         ${p.id===rec?'<span class="tag a rec">recomendado</span>':''}
         <div class="pt">${esc(p.nombre)}</div>
         <div class="pp">${esc(p.para)} · ${p.dias} días/semana</div>
@@ -2084,7 +2097,7 @@ function vistaHist(){
       ${usadas.map(p=>`<td class="n">${esc(marcaTxt(p,h.marcas[p.id]))||'—'}${h.pts[p.id]!==null&&h.pts[p.id]!==undefined?`<br><b style="color:var(--acc2)">${h.pts[p.id]}</b>`:''}</td>`).join('')}
       <td class="n">${esc(h.perfil||'')}</td><td class="n"><b>${notaTxt(h.nota)}</b></td>
       <td><span class="tag ${h.apto?'ok':'no'}">${h.apto?'APTO':'NO'}</span></td>
-      <td><button class="btn d sm" onclick="borraHist(${idx})">×</button></td></tr>`;}).join('')}
+      <td><button class="btn d sm" onclick="borraHist(${idx})" aria-label="Borrar este intento del historial">×</button></td></tr>`;}).join('')}
     </tbody></table></div>
     <div class="row" style="margin-top:11px">
       <button class="btn" onclick="exportaHist()">Exportar CSV</button>
@@ -2421,7 +2434,7 @@ function vistaInicio(){
   </div>
 
   ${prox?`<div class="card"><h2><span class="num">${r.completo?'3':'2'}</span>Tu próxima sesión</h2>
-    <div class="prox" onclick="setVista('plan')">
+    <div class="prox" onclick="setVista('plan')" role="button" tabindex="0" onkeydown="teclaActiva(event)" aria-label="Ir a tu plan de entrenamiento">
       <div class="pw">${prox.s.n}</div>
       <div style="flex:1;min-width:0">
         <div class="pt2">${esc(prox.ses.t)}</div>
@@ -2431,7 +2444,7 @@ function vistaInicio(){
     </div>
     <div class="hint">${esc(g.P.nombre)} · ${cuentaHechas(g.P.id)} de ${g.semanas.length*g.dias} sesiones completadas.</div>
   </div>`:(APP.plan && CFG.plan.activo?`<div class="card"><h2><span class="num">${r.completo?'3':'2'}</span>Plan de entrenamiento</h2>
-    <div class="prox" onclick="setVista('plan')">
+    <div class="prox" onclick="setVista('plan')" role="button" tabindex="0" onkeydown="teclaActiva(event)" aria-label="Ir a tu plan de entrenamiento">
       <div class="pw">12</div>
       <div style="flex:1;min-width:0"><div class="pt2">Doce semanas hechas a tu medida</div>
         <div class="hint" style="margin-top:2px">${CFG.planes.length} planes según tu nivel y tu objetivo</div></div>
