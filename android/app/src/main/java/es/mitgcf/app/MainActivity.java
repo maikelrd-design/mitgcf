@@ -366,7 +366,7 @@ public class MainActivity extends AppCompatActivity implements PurchasesUpdatedL
                                 .build()))
                 .build();
 
-        facturacion.queryProductDetailsAsync(p, (r, lista) -> {
+        facturacion.queryProductDetailsAsync(p, (r, resultado) -> { List<ProductDetails> lista = (resultado == null) ? null : resultado.getProductDetailsList();
             if (r.getResponseCode() == BillingClient.BillingResponseCode.OK
                     && lista != null && !lista.isEmpty()) {
                 detalles = lista.get(0);
